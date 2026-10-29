@@ -1,0 +1,901 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Shithead</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;700;800&display=swap">
+<style>
+/* Felt-table card game: single deliberate dark theme (green baize, gold accent), no light variant */
+:root{
+  --felt:#0f5c3f;
+  --felt-dark:#0a3d2a;
+  --felt-light:#15734e;
+  --card-bg:#faf5e6;
+  --card-text:#20231f;
+  --card-red:#b3222c;
+  --accent:#e8b646;
+  --accent-soft:#f0cf86;
+  --panel:#0c4330;
+  --panel-edge:#0a3a28;
+  --text:#f1f7f0;
+  --muted:#9fcdb3;
+  --danger:#d6584a;
+  --ok:#5fbf7a;
+  color-scheme: dark;
+}
+*{box-sizing:border-box;}
+html,body{height:100%;}
+body{
+  background: radial-gradient(ellipse at 50% 0%, var(--felt-light), var(--felt) 55%, var(--felt-dark) 100%);
+  color:var(--text);
+  font-family:'Nunito', system-ui, sans-serif;
+  min-height:100%;
+}
+#app{
+  min-height:100%;
+  display:flex;
+  flex-direction:column;
+  padding-left:max(16px, env(safe-area-inset-left,0px));
+  padding-right:max(16px, env(safe-area-inset-right,0px));
+  padding-block:16px;
+  gap:14px;
+}
+h1,h2,h3,.disp{font-family:'Fredoka',system-ui,sans-serif; letter-spacing:.3px;}
+.topbar{display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;}
+.brand{display:flex; align-items:center; gap:10px;}
+.brand .logo{font-size:1.6rem;}
+.brand h1{font-size:1.3rem; margin:0; color:var(--accent-soft);}
+button{
+  font-family:'Fredoka',system-ui,sans-serif;
+  font-weight:600;
+  border:none;
+  border-radius:12px;
+  padding:10px 18px;
+  font-size:.95rem;
+  cursor:pointer;
+  background:var(--accent);
+  color:#2b1d00;
+  box-shadow:0 2px 0 rgba(0,0,0,.25);
+  transition:transform .08s ease, filter .15s ease;
+}
+button:hover:not(:disabled){filter:brightness(1.08);}
+button:active:not(:disabled){transform:translateY(1px);}
+button:disabled{opacity:.4; cursor:not-allowed;}
+button.secondary{background:var(--panel); color:var(--text); border:1px solid rgba(255,255,255,.15);}
+button.danger{background:var(--danger); color:#2b0a06;}
+
+/* ---- setup screen ---- */
+.center-wrap{flex:1; display:flex; align-items:center; justify-content:center;}
+.card-panel{
+  background:var(--panel);
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:20px;
+  padding:28px;
+  max-width:460px;
+  width:100%;
+  box-shadow:0 20px 50px rgba(0,0,0,.35);
+}
+.card-panel h2{margin:0 0 6px; font-size:1.5rem; color:var(--accent-soft);}
+.card-panel p{margin:0 0 18px; color:var(--muted); line-height:1.5;}
+.opt-row{display:flex; gap:10px; flex-wrap:wrap; margin-bottom:20px;}
+.opt-btn{
+  flex:1; min-width:80px;
+  background:var(--felt-dark); color:var(--text);
+  border:2px solid rgba(255,255,255,.1);
+  border-radius:14px; padding:14px 10px; text-align:center; cursor:pointer;
+  font-family:'Fredoka',system-ui; font-weight:600;
+}
+.opt-btn.active{border-color:var(--accent); background:var(--felt-light); color:var(--accent-soft);}
+.opt-btn small{display:block; font-family:'Nunito'; font-weight:400; color:var(--muted); margin-top:2px;}
+details.rules{margin-top:16px; color:var(--muted); font-size:.85rem; line-height:1.5;}
+details.rules summary{cursor:pointer; color:var(--accent-soft); font-weight:700; margin-bottom:6px;}
+
+/* ---- cards ---- */
+.card{
+  width:56px; height:80px;
+  background:var(--card-bg);
+  color:var(--card-text);
+  border-radius:8px;
+  display:flex; flex-direction:column; justify-content:space-between;
+  padding:4px 6px;
+  font-weight:700;
+  font-size:.95rem;
+  box-shadow:0 2px 4px rgba(0,0,0,.4);
+  user-select:none;
+  flex-shrink:0;
+  position:relative;
+  border:1px solid rgba(0,0,0,.08);
+}
+.card.red{color:var(--card-red);}
+.card .rank{line-height:1;}
+.card .suit{font-size:1.1rem; align-self:flex-end;}
+.card.back{
+  background:repeating-linear-gradient(45deg, var(--felt-light), var(--felt-light) 6px, var(--panel-edge) 6px, var(--panel-edge) 12px);
+  border:1px solid rgba(255,255,255,.15);
+}
+.card.back::after{
+  content:"✦"; position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+  color:var(--accent-soft); font-size:1.2rem; opacity:.8;
+}
+.card.small{width:40px; height:58px; font-size:.75rem; border-radius:6px;}
+.card.small .suit{font-size:.85rem;}
+.card.selected{outline:3px solid var(--accent); transform:translateY(-8px);}
+.card.playable{box-shadow:0 0 0 2px var(--ok), 0 2px 4px rgba(0,0,0,.4); cursor:pointer;}
+.card.playable:hover{transform:translateY(-4px);}
+.card.ghost{opacity:.35;}
+.stack{display:flex;}
+.stack .card{margin-left:-28px;}
+.stack .card:first-child{margin-left:0;}
+.stack.small .card{margin-left:-18px;}
+.stack.small .card:first-child{margin-left:0;}
+
+/* ---- game layout ---- */
+.table{flex:1; display:flex; flex-direction:column; gap:16px; min-width:0;}
+.opponents{display:flex; gap:12px; flex-wrap:wrap; justify-content:center;}
+.player-box{
+  background:var(--panel); border:1px solid rgba(255,255,255,.08); border-radius:14px;
+  padding:8px 10px; min-width:120px; display:flex; flex-direction:column; gap:5px; align-items:center;
+  transition:box-shadow .2s ease;
+}
+.player-box.turn{box-shadow:0 0 0 3px var(--accent), 0 8px 20px rgba(0,0,0,.3);}
+.player-box .name{font-family:'Fredoka'; font-weight:600; font-size:.9rem; display:flex; align-items:center; gap:6px;}
+.player-box .name .tag{font-size:.65rem; background:var(--felt-dark); color:var(--muted); padding:2px 6px; border-radius:6px;}
+.player-box .name .chevron{margin-left:auto; color:var(--muted); font-size:.7rem;}
+.player-box.clickable{cursor:pointer;}
+.player-box.clickable:hover{background:var(--felt-light);}
+.row{display:flex; gap:6px; align-items:center; flex-wrap:wrap; justify-content:center;}
+.count-badge{
+  background:var(--felt-dark); border-radius:8px; padding:3px 8px; font-size:.75rem; color:var(--muted);
+  font-variant-numeric:tabular-nums;
+}
+.pile-area{display:flex; flex-direction:column; align-items:center; gap:8px;}
+.pile-main{display:flex; align-items:center; justify-content:center; gap:28px; flex-wrap:wrap;}
+.pile-cards{position:relative; width:90px; height:100px; display:flex; align-items:center; justify-content:center;}
+.pile-cards .card{position:absolute;}
+.pile-cards .card:nth-last-child(1){transform:rotate(-2deg);}
+.pile-cards .card:nth-last-child(2){transform:rotate(4deg); opacity:.6;}
+.pile-cards .card:nth-last-child(3){transform:rotate(-6deg); opacity:.35;}
+.deck-stack{display:flex; flex-direction:column; align-items:center; gap:4px;}
+.requirement{
+  font-family:'Fredoka'; font-weight:600; font-size:1rem; text-align:center;
+  background:var(--felt-dark); padding:8px 16px; border-radius:30px; color:var(--accent-soft);
+  border:1px solid rgba(255,255,255,.1);
+}
+.log{
+  background:rgba(0,0,0,.2); border-radius:12px; padding:8px 12px; font-size:.8rem; color:var(--muted);
+  max-height:72px; overflow-y:auto; line-height:1.5;
+}
+.log div:last-child{color:var(--text); font-weight:600;}
+
+.human-area{display:flex; flex-direction:column; gap:8px; align-items:center;}
+.human-area .label{font-family:'Fredoka'; font-size:.85rem; color:var(--muted);}
+.human-faceup-row, .human-facedown-row, .human-hand-row{display:flex; gap:8px; justify-content:center; flex-wrap:wrap; min-height:84px; align-items:center;}
+.actions{display:flex; gap:10px; justify-content:center; flex-wrap:wrap; min-height:44px;}
+.swap-cols{display:flex; gap:24px; justify-content:center; flex-wrap:wrap; margin:18px 0;}
+.swap-col{display:flex; flex-direction:column; align-items:center; gap:8px;}
+.swap-col .lbl{font-size:.8rem; color:var(--muted); font-weight:700;}
+.hint{font-size:.78rem; color:var(--muted); text-align:center; max-width:360px;}
+
+.endscreen{display:flex; flex-direction:column; align-items:center; gap:14px; text-align:center;}
+.standings{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:8px; width:100%; max-width:320px;}
+.standings li{
+  background:var(--felt-dark); border-radius:10px; padding:10px 14px; display:flex; justify-content:space-between;
+  font-weight:700;
+}
+.standings li.loser{background:var(--danger); color:#2b0a06;}
+.standings li.winner{background:var(--ok); color:#06220f;}
+
+@media (max-width:480px){
+  .card{width:48px; height:68px; font-size:.82rem;}
+  .card .suit{font-size:.95rem;}
+  .card.small{width:34px; height:50px; font-size:.65rem;}
+}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+(function(){
+  "use strict";
+
+  var RANKS = ['3','4','5','6','7','8','9','10','J','Q','K','A','2'];
+  var RANKIDX = {}; RANKS.forEach(function(r,i){ RANKIDX[r]=i; });
+  var SUITS = ['♠','♥','♦','♣'];
+  var RED_SUITS = {'♥':1,'♦':1};
+  var SPECIALS = {'2':1,'7':1,'10':1};
+
+  var state = null;
+
+  function createDeck(){
+    var deck = [];
+    var uid = 0;
+    for (var d=0; d<2; d++){
+      for (var s=0; s<SUITS.length; s++){
+        for (var r=0; r<RANKS.length; r++){
+          deck.push({rank:RANKS[r], suit:SUITS[s], id:'c'+(uid++)});
+        }
+      }
+    }
+    return deck;
+  }
+
+  function shuffle(arr){
+    for (var i=arr.length-1; i>0; i--){
+      var j = Math.floor(Math.random()*(i+1));
+      var t = arr[i]; arr[i]=arr[j]; arr[j]=t;
+    }
+    return arr;
+  }
+
+  function isPlayable(card, pileState){
+    if (SPECIALS[card.rank]) return true;
+    if (pileState.mode === 'any') return true;
+    if (pileState.mode === 'low7') return RANKIDX[card.rank] <= RANKIDX['6'];
+    if (pileState.mode === 'normal') return RANKIDX[card.rank] >= pileState.value;
+    return false;
+  }
+
+  function requirementText(pileState){
+    if (pileState.mode === 'any') return 'Bármit lerakhatsz';
+    if (pileState.mode === 'low7') return '7-es vagy kisebb szükséges (vagy speciális lap)';
+    if (pileState.mode === 'normal') return RANKS[pileState.value] + ' vagy nagyobb szükséges (vagy speciális lap)';
+    return '';
+  }
+
+  function log(msg){
+    state.log.push(msg);
+    if (state.log.length > 60) state.log.shift();
+  }
+
+  function newGame(numAI){
+    var deck = shuffle(createDeck());
+    var players = [];
+    players.push({ id:0, name:'Te', isHuman:true, hand:[], faceUp:[], faceDown:[], finished:false, finishPlace:null });
+    for (var i=0; i<numAI; i++){
+      players.push({ id:i+1, name:'Bot '+(i+1), isHuman:false, hand:[], faceUp:[], faceDown:[], finished:false, finishPlace:null });
+    }
+    players.forEach(function(p){
+      for (var k=0;k<3;k++) p.faceDown.push(deck.pop());
+      for (var k=0;k<3;k++) p.faceUp.push(deck.pop());
+      for (var k=0;k<3;k++) p.hand.push(deck.pop());
+    });
+    state = {
+      phase: 'swap',
+      deck: deck,
+      players: players,
+      pile: [],
+      pileState: {mode:'any'},
+      turnIndex: 0,
+      finishCounter: 0,
+      log: [],
+      swapSelectedHandIdx: null,
+      selectedHand: [],
+      awaitingHuman: false,
+      busy: false,
+      expanded: {}
+    };
+    // AI auto-swap: put the 3 strongest of (hand+faceUp) face-up, weakest 3 in hand
+    players.forEach(function(p){
+      if (p.isHuman) return;
+      var combined = p.hand.concat(p.faceUp);
+      combined.sort(function(a,b){ return RANKIDX[b.rank]-RANKIDX[a.rank]; });
+      p.faceUp = combined.slice(0,3);
+      p.hand = combined.slice(3,6);
+    });
+    render();
+  }
+
+  function activePlayers(){ return state.players.filter(function(p){ return !p.finished; }); }
+
+  function nextActiveIndex(fromIdx){
+    var n = state.players.length;
+    var idx = fromIdx;
+    for (var i=0; i<n; i++){
+      idx = (idx+1) % n;
+      if (!state.players[idx].finished) return idx;
+    }
+    return fromIdx;
+  }
+
+  function updatePileStateAfterPlay(rank){
+    if (rank === '2'){ state.pileState = {mode:'any'}; return false; }
+    if (rank === '7'){ state.pileState = {mode:'low7'}; return false; }
+    if (rank === '10'){ state.pileState = {mode:'any'}; return true; }
+    state.pileState = {mode:'normal', value: RANKIDX[rank]};
+    return false;
+  }
+
+  // Detects the burn but does NOT clear the pile yet — the caller keeps the
+  // cards visible for a moment (via settle()) before they actually vanish.
+  function checkFourOfAKind(){
+    var p = state.pile;
+    if (p.length < 4) return false;
+    var last4 = p.slice(-4);
+    var r = last4[0].rank;
+    return last4.every(function(c){ return c.rank === r; });
+  }
+
+  function currentPhaseOf(p){
+    if (p.hand.length > 0) return 'hand';
+    if (p.faceUp.length > 0) return 'faceup';
+    if (p.faceDown.length > 0) return 'facedown';
+    return 'done';
+  }
+
+  function checkFinished(p){
+    if (p.hand.length===0 && p.faceUp.length===0 && p.faceDown.length===0){
+      p.finished = true;
+      state.finishCounter++;
+      p.finishPlace = state.finishCounter;
+      log(p.name + ' kirakott mindent! (' + ordinal(p.finishPlace) + ' hely)');
+      return true;
+    }
+    return false;
+  }
+
+  function ordinal(n){
+    return n + '.';
+  }
+
+  function drawToThree(p){
+    while (p.hand.length < 3 && state.deck.length > 0){
+      p.hand.push(state.deck.pop());
+    }
+  }
+
+  function checkGameEnd(){
+    var act = activePlayers();
+    if (act.length <= 1){
+      if (act.length === 1){
+        act[0].finishPlace = state.finishCounter + 1;
+        log(act[0].name + ' maradt az összes lappal... ő a SHITHEAD! 💩');
+      }
+      state.phase = 'end';
+      return true;
+    }
+    return false;
+  }
+
+  // Logs the move, renders it immediately (cards stay visible on the pile),
+  // waits a beat so the player can actually see what happened, THEN applies
+  // the pile-clearing / pickup mutation and moves on to the next turn.
+  function settle(msg, applyFn, player, burned){
+    log(msg);
+    state.busy = true;
+    render();
+    var delay = burned ? 1900 : 1100;
+    setTimeout(function(){
+      applyFn();
+      state.selectedHand = [];
+      state.busy = false;
+      if (checkGameEnd()){ render(); return; }
+      if (burned && !player.finished){
+        scheduleTurn(indexOfPlayer(player.id));
+        return;
+      }
+      state.turnIndex = nextActiveIndex(state.turnIndex);
+      scheduleTurn(state.turnIndex);
+    }, delay);
+  }
+
+  function indexOfPlayer(id){
+    for (var i=0;i<state.players.length;i++) if (state.players[i].id===id) return i;
+    return 0;
+  }
+
+  function scheduleTurn(idx){
+    state.turnIndex = idx;
+    var p = state.players[idx];
+    render();
+    if (!p.isHuman){
+      state.awaitingHuman = false;
+      setTimeout(function(){ aiTakeTurn(p); }, 650);
+    } else {
+      state.awaitingHuman = true;
+    }
+  }
+
+  // ---- core play actions ----
+  function playFromHand(player, cards){
+    cards.forEach(function(c){
+      var idx = player.hand.indexOf(c);
+      if (idx>-1) player.hand.splice(idx,1);
+    });
+    state.pile = state.pile.concat(cards);
+    var burned10 = updatePileStateAfterPlay(cards[0].rank);
+    var burnedFour = checkFourOfAKind();
+    var burned = burned10 || burnedFour;
+    var msg = player.name + ' lerakta: ' + cards.map(cardLabel).join(', ');
+    if (burned10) msg += ' — 🔥 tízes, kiégeti a dobópaklit!';
+    else if (burnedFour) msg += ' — 🔥 négy egyforma lap, kiégeti a dobópaklit!';
+    var finished = checkFinished(player);
+    if (!finished && state.deck.length>0) drawToThree(player);
+    settle(msg, function(){ if (burned){ state.pile = []; state.pileState = {mode:'any'}; } }, player, burned);
+  }
+
+  function playFromFaceUp(player, card){
+    var idx = player.faceUp.indexOf(card);
+    if (idx>-1) player.faceUp.splice(idx,1);
+    state.pile.push(card);
+    var burned10 = updatePileStateAfterPlay(card.rank);
+    var burnedFour = checkFourOfAKind();
+    var burned = burned10 || burnedFour;
+    var msg = player.name + ' (felfordított lapból) lerakta: ' + cardLabel(card);
+    if (burned10) msg += ' — 🔥 tízes, kiégeti a dobópaklit!';
+    else if (burnedFour) msg += ' — 🔥 négy egyforma lap, kiégeti a dobópaklit!';
+    checkFinished(player);
+    settle(msg, function(){ if (burned){ state.pile = []; state.pileState = {mode:'any'}; } }, player, burned);
+  }
+
+  function pickupFromFaceUpFail(player){
+    var msg = player.name + ' nem tud lerakni felfordított lapot, felveszi a dobópaklit (' + state.pile.length + ' lap).';
+    settle(msg, function(){
+      player.hand = player.hand.concat(state.pile);
+      state.pile = [];
+      state.pileState = {mode:'any'};
+    }, player, false);
+  }
+
+  function revealFaceDown(player, idx){
+    var card = player.faceDown.splice(idx,1)[0];
+    var ok = isPlayable(card, state.pileState);
+    if (ok){
+      state.pile.push(card);
+      var burned10 = updatePileStateAfterPlay(card.rank);
+      var burnedFour = checkFourOfAKind();
+      var burned = burned10 || burnedFour;
+      var msg = player.name + ' vakon fordított: ' + cardLabel(card) + ' — passzol!';
+      if (burned10) msg += ' 🔥 Tízes, kiégeti a dobópaklit!';
+      else if (burnedFour) msg += ' 🔥 Négy egyforma lap, kiégeti a dobópaklit!';
+      checkFinished(player);
+      settle(msg, function(){ if (burned){ state.pile = []; state.pileState = {mode:'any'}; } }, player, burned);
+    } else {
+      state.pile.push(card);
+      var msg2 = player.name + ' vakon fordított: ' + cardLabel(card) + ' — nem jó, felveszi a paklit (' + state.pile.length + ' lap).';
+      settle(msg2, function(){
+        player.hand = player.hand.concat(state.pile);
+        state.pile = [];
+        state.pileState = {mode:'any'};
+      }, player, false);
+    }
+  }
+
+  function pickupFromHandFail(player){
+    var msg = player.name + ' nem tud lerakni, felveszi a dobópaklit (' + state.pile.length + ' lap).';
+    settle(msg, function(){
+      player.hand = player.hand.concat(state.pile);
+      state.pile = [];
+      state.pileState = {mode:'any'};
+    }, player, false);
+  }
+
+  function drawRescue(player){
+    if (state.deck.length === 0){ pickupFromHandFail(player); return; }
+    var card = state.deck.pop();
+    var ok = isPlayable(card, state.pileState);
+    if (ok){
+      state.pile.push(card);
+      var burned10 = updatePileStateAfterPlay(card.rank);
+      var burnedFour = checkFourOfAKind();
+      var burned = burned10 || burnedFour;
+      var msg = player.name + ' húzott a pakliból: ' + cardLabel(card);
+      if (burned10) msg += ' — 🔥 tízes, kiégeti a dobópaklit, újra jön!';
+      else if (burnedFour) msg += ' — 🔥 négy egyforma lap, kiégeti a dobópaklit, újra jön!';
+      else msg += ' — sikerült, felkerült a dobópaklira.';
+      settle(msg, function(){ if (burned){ state.pile = []; state.pileState = {mode:'any'}; } }, player, burned);
+    } else {
+      state.pile.push(card);
+      var msg2 = player.name + ' húzott a pakliból: ' + cardLabel(card) + ' — nem megfelelő, felveszi a dobópaklit (' + state.pile.length + ' lap).';
+      settle(msg2, function(){
+        player.hand = player.hand.concat(state.pile);
+        state.pile = [];
+        state.pileState = {mode:'any'};
+      }, player, false);
+    }
+  }
+
+  // ---- AI ----
+  function aiTakeTurn(player){
+    if (player.hand.length > 0){
+      var groups = {};
+      player.hand.forEach(function(c){ (groups[c.rank]=groups[c.rank]||[]).push(c); });
+      var playableRanks = Object.keys(groups).filter(function(r){ return isPlayable({rank:r}, state.pileState); });
+      if (playableRanks.length===0){
+        if (state.deck.length>0) drawRescue(player); else pickupFromHandFail(player);
+        return;
+      }
+      var nonSpecial = playableRanks.filter(function(r){ return !SPECIALS[r]; });
+      var chosen;
+      if (nonSpecial.length>0){
+        nonSpecial.sort(function(a,b){ return RANKIDX[a]-RANKIDX[b]; });
+        chosen = nonSpecial[0];
+      } else {
+        var pref = ['7','2','10'];
+        chosen = pref.filter(function(r){ return playableRanks.indexOf(r)>-1; })[0] || playableRanks[0];
+      }
+      playFromHand(player, groups[chosen].slice());
+      return;
+    }
+    if (player.faceUp.length > 0){
+      var playable = player.faceUp.filter(function(c){ return isPlayable(c, state.pileState); });
+      if (playable.length===0){ pickupFromFaceUpFail(player); return; }
+      playable.sort(function(a,b){ return (SPECIALS[a.rank]?1:0)-(SPECIALS[b.rank]?1:0) || RANKIDX[a.rank]-RANKIDX[b.rank]; });
+      playFromFaceUp(player, playable[0]);
+      return;
+    }
+    if (player.faceDown.length > 0){
+      revealFaceDown(player, Math.floor(Math.random()*player.faceDown.length));
+      return;
+    }
+  }
+
+  // ---- human interaction ----
+  function toggleHandSelect(card){
+    var sel = state.selectedHand;
+    var pos = sel.indexOf(card);
+    if (pos>-1){ sel.splice(pos,1); render(); return; }
+    if (sel.length>0 && sel[0].rank !== card.rank){ state.selectedHand = [card]; render(); return; }
+    sel.push(card);
+    render();
+  }
+
+  function humanPlaySelected(){
+    var player = state.players[0];
+    var sel = state.selectedHand.slice();
+    if (sel.length===0) return;
+    if (!isPlayable(sel[0], state.pileState)) return;
+    state.selectedHand = [];
+    playFromHand(player, sel);
+  }
+
+  function humanPickupHand(){ pickupFromHandFail(state.players[0]); }
+  function humanDrawRescue(){ drawRescue(state.players[0]); }
+  function humanPickupFaceUp(){ pickupFromFaceUpFail(state.players[0]); }
+  function humanPlayFaceUp(card){
+    if (!isPlayable(card, state.pileState)) return;
+    playFromFaceUp(state.players[0], card);
+  }
+  function humanRevealFaceDown(idx){ revealFaceDown(state.players[0], idx); }
+
+  function cardLabel(c){ return c.rank + c.suit; }
+
+  // ---- swap phase ----
+  function swapClickHand(idx){
+    if (state.swapSelectedHandIdx === idx){ state.swapSelectedHandIdx = null; }
+    else { state.swapSelectedHandIdx = idx; }
+    render();
+  }
+  function swapClickFaceUp(idx){
+    var human = state.players[0];
+    if (state.swapSelectedHandIdx === null) return;
+    var hi = state.swapSelectedHandIdx;
+    var tmp = human.hand[hi];
+    human.hand[hi] = human.faceUp[idx];
+    human.faceUp[idx] = tmp;
+    state.swapSelectedHandIdx = null;
+    render();
+  }
+  function confirmSwap(){
+    state.phase = 'play';
+    state.turnIndex = Math.floor(Math.random()*state.players.length);
+    log('A csere kész. Kezdő játékos: ' + state.players[state.turnIndex].name + '.');
+    scheduleTurn(state.turnIndex);
+  }
+
+  // ---------------- RENDER ----------------
+  function el(tag, cls, text){
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text !== undefined) e.textContent = text;
+    return e;
+  }
+
+  function cardEl(card, opts){
+    opts = opts || {};
+    var c = el('div', 'card' + (opts.small?' small':'') + (RED_SUITS[card.suit]?' red':''));
+    if (opts.playable) c.className += ' playable';
+    if (opts.selected) c.className += ' selected';
+    var rank = el('div','rank', card.rank);
+    var suit = el('div','suit', card.suit);
+    c.appendChild(rank); c.appendChild(suit);
+    if (opts.onclick) c.onclick = opts.onclick;
+    return c;
+  }
+
+  function backEl(opts){
+    opts = opts || {};
+    var c = el('div', 'card back' + (opts.small?' small':''));
+    if (opts.onclick) c.onclick = opts.onclick;
+    return c;
+  }
+
+  function render(){
+    var app = document.getElementById('app');
+    app.innerHTML = '';
+
+    var topbar = el('div','topbar');
+    var brand = el('div','brand');
+    brand.appendChild(el('div','logo','🃏'));
+    brand.appendChild(el('h1',null,'Shithead'));
+    topbar.appendChild(brand);
+    if (state && (state.phase==='play' || state.phase==='swap')){
+      var newBtn = el('button','secondary','Új játék');
+      newBtn.onclick = function(){ state = null; render(); };
+      topbar.appendChild(newBtn);
+    }
+    app.appendChild(topbar);
+
+    if (!state){ renderSetup(app); return; }
+    if (state.phase === 'swap'){ renderSwap(app); return; }
+    if (state.phase === 'play'){ renderPlay(app); return; }
+    if (state.phase === 'end'){ renderEnd(app); return; }
+  }
+
+  var pendingAICount = 1;
+  function renderSetup(app){
+    var wrap = el('div','center-wrap');
+    var panel = el('div','card-panel');
+    panel.appendChild(el('h2',null,'Új partit?'));
+    panel.appendChild(el('p',null,'Klasszikus kártyajáték 2 pakli francia kártyával. Te és a botok ellen: az győz, aki először elfogy a lapjaiból — a legtovább bent maradó a shithead.'));
+
+    var lbl = el('div','opt-row');
+    panel.appendChild(el('h3', null, 'Hány bot ellen játszol?'));
+    [1,2,3].forEach(function(n){
+      var b = el('div','opt-btn' + (pendingAICount===n?' active':''));
+      b.innerHTML = n + ' bot<br><small>' + (n+1) + ' játékos összesen</small>';
+      b.onclick = function(){ pendingAICount = n; render(); };
+      lbl.appendChild(b);
+    });
+    panel.appendChild(lbl);
+
+    var startBtn = el('button', null, 'Osztás, kezdjünk! 🎲');
+    startBtn.onclick = function(){ newGame(pendingAICount); };
+    panel.appendChild(startBtn);
+
+    var rules = el('details','rules');
+    var sum = el('summary', null, 'Szabályok röviden');
+    rules.appendChild(sum);
+    var rtext = el('div');
+    rtext.innerHTML = 'Mindenkinek 3 lefordított, 3 felfordított és 3 kézben tartott lapja van. A csere fázisban kézi lapokat cserélhetsz a felfordítottakra. Mindig egyenlő vagy nagyobb lapot kell letenned a dobott lapnál, különben felveszed a paklit. Speciális lapok bármikor lerakhatók: <b>2</b> – nullázza az elvárást, <b>7</b> – a következő lapnak 7-esnek vagy kisebbnek kell lennie, <b>10</b> – kiégeti a dobópaklit és újra jössz. <b>Négy egyforma</b> lap egymás után (akár több körön át összegyűlve) szintén kiégeti a dobópaklit. Ha nincs megfelelő lapod, de van még húzópakli, mentő húzással próbálkozhatsz: véletlenszerűen húzol egy lapot, és ha passzol, az felkerül a dobópaklira — ha nem, a dobópaklival együtt felveszed. Ha kifogy a kezed és a húzópakli is, a felfordított lapokból, majd vakon a lefordítottakból kell játszanod.';
+    rules.appendChild(rtext);
+    panel.appendChild(rules);
+
+    wrap.appendChild(panel);
+    app.appendChild(wrap);
+  }
+
+  function renderSwap(app){
+    var wrap = el('div','center-wrap');
+    var panel = el('div','card-panel');
+    panel.style.maxWidth = '560px';
+    panel.appendChild(el('h2',null,'Cseréld meg a lapjaidat'));
+    panel.appendChild(el('p',null,'Válaszd ki a 3 legerősebb kézi lapodat, és cseréld ki a felfordított lapokra, ha jobbak. Kattints egy kézi lapra, majd egy felfordítottra a cseréhez.'));
+
+    var human = state.players[0];
+    var cols = el('div','swap-cols');
+
+    var handCol = el('div','swap-col');
+    handCol.appendChild(el('div','lbl','KÉZ'));
+    var handRow = el('div','row');
+    human.hand.forEach(function(card, idx){
+      var c = cardEl(card, {
+        selected: state.swapSelectedHandIdx===idx,
+        onclick: function(){ swapClickHand(idx); }
+      });
+      handRow.appendChild(c);
+    });
+    handCol.appendChild(handRow);
+    cols.appendChild(handCol);
+
+    var faceCol = el('div','swap-col');
+    faceCol.appendChild(el('div','lbl','FELFORDÍTOTT'));
+    var faceRow = el('div','row');
+    human.faceUp.forEach(function(card, idx){
+      var c = cardEl(card, { onclick: function(){ swapClickFaceUp(idx); } });
+      faceRow.appendChild(c);
+    });
+    faceCol.appendChild(faceRow);
+    cols.appendChild(faceCol);
+
+    panel.appendChild(cols);
+    panel.appendChild(el('div','hint','A lefordított lapjaidat (3 db) nem látod — azok a játék végéig titkosak maradnak.'));
+
+    var goBtn = el('button', null, 'Kezdjünk! →');
+    goBtn.style.marginTop = '14px';
+    goBtn.onclick = confirmSwap;
+    panel.appendChild(goBtn);
+
+    wrap.appendChild(panel);
+    app.appendChild(wrap);
+  }
+
+  function renderPlay(app){
+    var table = el('div','table');
+    var human = state.players[0];
+    var others = state.players.slice(1);
+
+    // opponents row
+    var oppRow = el('div','opponents');
+    others.forEach(function(p){
+      oppRow.appendChild(renderPlayerBox(p));
+    });
+    table.appendChild(oppRow);
+
+    // pile area
+    var pileArea = el('div','pile-area');
+    var pileMain = el('div','pile-main');
+
+    var pileCardsWrap = el('div','pile-cards');
+    var showN = state.pile.slice(-3);
+    showN.forEach(function(c){ pileCardsWrap.appendChild(cardEl(c)); });
+    if (state.pile.length===0){
+      var empty = el('div','card ghost');
+      empty.appendChild(el('div','rank','–'));
+      pileCardsWrap.appendChild(empty);
+    }
+    var pileLabel = el('div','deck-stack');
+    pileLabel.appendChild(pileCardsWrap);
+    pileLabel.appendChild(el('div','count-badge', 'Dobópakli: ' + state.pile.length));
+    pileMain.appendChild(pileLabel);
+
+    var deckStack = el('div','deck-stack');
+    deckStack.appendChild(backEl());
+    deckStack.appendChild(el('div','count-badge','Húzópakli: ' + state.deck.length));
+    pileMain.appendChild(deckStack);
+
+    pileArea.appendChild(pileMain);
+    pileArea.appendChild(el('div','requirement', requirementText(state.pileState)));
+
+    var logBox = el('div','log');
+    state.log.slice(-6).forEach(function(line){ logBox.appendChild(el('div',null,line)); });
+    pileArea.appendChild(logBox);
+
+    table.appendChild(pileArea);
+
+    // human area
+    var humanArea = el('div','human-area');
+    var myBox = renderPlayerBox(human, true);
+    humanArea.appendChild(myBox);
+
+    var isMyTurn = state.turnIndex === 0 && !human.finished && state.phase==='play';
+    var canAct = isMyTurn && !state.busy;
+
+    if (human.hand.length > 0){
+      humanArea.appendChild(el('div','label','A kezed'));
+      var handRow = el('div','human-hand-row');
+      human.hand.forEach(function(card){
+        var playable = canAct && isPlayable(card, state.pileState);
+        var selected = state.selectedHand.indexOf(card)>-1;
+        handRow.appendChild(cardEl(card, {
+          playable: playable,
+          selected: selected,
+          onclick: playable ? function(){ toggleHandSelect(card); } : null
+        }));
+      });
+      humanArea.appendChild(handRow);
+
+      var hasPlayable = human.hand.some(function(c){ return isPlayable(c, state.pileState); });
+      var actions = el('div','actions');
+      if (canAct){
+        var playBtn = el('button', null, 'Lerakás');
+        playBtn.disabled = state.selectedHand.length===0;
+        playBtn.onclick = humanPlaySelected;
+        actions.appendChild(playBtn);
+        if (!hasPlayable){
+          if (state.deck.length>0){
+            var rescueBtn = el('button','secondary','🎲 Húzok a pakliból (mentő húzás)');
+            rescueBtn.onclick = humanDrawRescue;
+            actions.appendChild(rescueBtn);
+          }
+          var pickBtn = el('button','danger','Felveszem a dobópaklit');
+          pickBtn.onclick = humanPickupHand;
+          actions.appendChild(pickBtn);
+        }
+      } else {
+        actions.appendChild(el('div','hint', isMyTurn ? 'Egy pillanat...' : 'Várj a körödre...'));
+      }
+      humanArea.appendChild(actions);
+    } else if (human.faceUp.length > 0) {
+      humanArea.appendChild(el('div','label','Felfordított lapok'));
+      var fuRow = el('div','human-faceup-row');
+      human.faceUp.forEach(function(card){
+        var playable = canAct && isPlayable(card, state.pileState);
+        fuRow.appendChild(cardEl(card, {
+          playable: playable,
+          onclick: playable ? function(){ humanPlayFaceUp(card); } : null
+        }));
+      });
+      humanArea.appendChild(fuRow);
+      var hasPlayableFU = human.faceUp.some(function(c){ return isPlayable(c, state.pileState); });
+      if (canAct && !hasPlayableFU){
+        var actions2 = el('div','actions');
+        var pickBtn2 = el('button','danger','Nincs jó lapom — felveszem a paklit');
+        pickBtn2.onclick = humanPickupFaceUp;
+        actions2.appendChild(pickBtn2);
+        humanArea.appendChild(actions2);
+      }
+    } else if (human.faceDown.length > 0) {
+      humanArea.appendChild(el('div','label','Lefordított lapok — válassz vakon'));
+      var fdRow = el('div','human-facedown-row');
+      human.faceDown.forEach(function(card, idx){
+        fdRow.appendChild(backEl({ onclick: canAct ? function(){ humanRevealFaceDown(idx); } : null }));
+      });
+      humanArea.appendChild(fdRow);
+    }
+
+    table.appendChild(humanArea);
+    app.appendChild(table);
+  }
+
+  function renderPlayerBox(p, isMe){
+    var idx = isMe ? 0 : state.players.indexOf(p);
+    var isTurn = state.turnIndex===idx && !p.finished;
+    var phase = currentPhaseOf(p);
+    var autoExpand = isTurn && (phase==='faceup' || phase==='facedown');
+    var manualExpand = !!state.expanded[p.id];
+    var expanded = !isMe && (autoExpand || manualExpand);
+
+    var box = el('div','player-box' + (isTurn?' turn':'') + (!isMe?' clickable':''));
+    var name = el('div','name');
+    name.appendChild(document.createTextNode((isMe ? '👤 ' : '🤖 ') + p.name));
+    if (p.finished){ name.appendChild(el('span','tag', (p.finishPlace) + '. hely')); }
+    if (!isMe){ name.appendChild(el('span','chevron', expanded ? '▾' : '▸')); }
+    box.appendChild(name);
+
+    if (!isMe){
+      box.onclick = function(){ state.expanded[p.id] = !state.expanded[p.id]; render(); };
+
+      var summary = el('div','row');
+      summary.appendChild(el('span','count-badge', '✋ ' + p.hand.length));
+      summary.appendChild(el('span','count-badge', '▲ ' + p.faceUp.length));
+      summary.appendChild(el('span','count-badge', '▼ ' + p.faceDown.length));
+      box.appendChild(summary);
+
+      if (expanded){
+        if (p.faceUp.length>0){
+          var r2 = el('div','row');
+          p.faceUp.forEach(function(c){ r2.appendChild(cardEl(c, {small:true})); });
+          box.appendChild(r2);
+        }
+        if (p.faceDown.length>0){
+          var r3 = el('div','row');
+          for (var j=0;j<p.faceDown.length;j++) r3.appendChild(backEl({small:true}));
+          box.appendChild(r3);
+        }
+      }
+    }
+    return box;
+  }
+
+  function renderEnd(app){
+    var wrap = el('div','center-wrap');
+    var panel = el('div','card-panel');
+    panel.appendChild(el('h2',null,'Vége a játéknak!'));
+    var sorted = state.players.slice().sort(function(a,b){ return a.finishPlace-b.finishPlace; });
+    panel.appendChild(el('p',null,'Végeredmény:'));
+    var ul = el('ul','standings');
+    var last = sorted.length-1;
+    sorted.forEach(function(p, i){
+      var li = el('li', i===0 ? 'winner' : (i===last ? 'loser' : ''));
+      var left = el('span',null, p.finishPlace + '. ' + p.name);
+      var right = el('span',null, i===0 ? '🏆 győztes' : (i===last ? '💩 shithead' : ''));
+      li.appendChild(left); li.appendChild(right);
+      ul.appendChild(li);
+    });
+    panel.appendChild(ul);
+    var again = el('button', null, 'Új játék');
+    again.style.marginTop='16px';
+    again.onclick = function(){ state = null; render(); };
+    panel.appendChild(again);
+    wrap.appendChild(panel);
+    app.appendChild(wrap);
+  }
+
+  render();
+})();
+</script>
+</body>
+</html>
